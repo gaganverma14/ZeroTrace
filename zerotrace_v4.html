@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ZEROTRACE — Metadata Redaction Utility</title>
+<meta name="description" content="Strip EXIF, GPS, camera, and other embedded metadata from images entirely in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0d0f12;
+  --ink-2:#111419;
+  --panel:#171b21;
+  --panel-2:#1e232b;
+  --panel-3:#252b34;
+  --line:#2a3038;
+  --line-soft:#20252c;
+  --paper:#ece8df;
+  --paper-dim:#d3cfc4;
+  --muted:#959bA6;
+  --muted-2:#7b8290;
+  --keep:#57c7d4;
+  --keep-dim:#2e4850;
+  --remove:#d9584c;
+  --remove-dim:#4a2c28;
+  --remove-bright:#ff6a5a;
+  --amber:#e0a83f;
+  --radius:3px;
+  --font-display:'Space Grotesk', sans-serif;
+  --font-body:'Inter', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(87,199,212,0.06), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(217,88,76,0.05), transparent 55%),
+    var(--ink);
+  color:var(--paper);
+  font-family:var(--font-body);
+  font-size:15px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;display:block}
+button{font-family:inherit;color:inherit;cursor:pointer;-webkit-appearance:none;appearance:none;background:none;border:none}
+::selection{background:var(--keep);color:var(--ink)}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:0.001ms !important;transition-duration:0.001ms !important}
+}
+
+:focus-visible{outline:2px solid var(--keep);outline-offset:2px}
+
+/* ---------- layout shell ---------- */
+.app{max-width:1180px;margin:0 auto;padding:0 24px 80px}
+.topbar{
+  display:flex;align-items:baseline;justify-content:space-between;
+  padding:28px 0 20px;border-bottom:1px solid var(--line-soft);
+  flex-wrap:wrap;gap:8px;
+}
+.brand{display:flex;align-items:baseline;gap:12px}
+.brand-mark{
+  font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:0.04em;
+  color:var(--paper);
+}
+.brand-mark span{color:var(--remove)}
+.brand-sub{
+  font-family:var(--font-mono);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--muted);
+}
+.topbar-note{font-family:var(--font-mono);font-size:11px;color:var(--muted-2);letter-spacing:0.04em}
+
+.theme-toggle{display:flex;gap:6px;flex:0 0 auto}
+.theme-btn{
+  -webkit-appearance:none;appearance:none;
+  font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+  padding:8px 14px;border-radius:2px;border:1px solid var(--line);
+  background:var(--panel-2);color:var(--paper-dim);white-space:nowrap;
+}
+.theme-btn:hover{border-color:var(--paper-dim);color:var(--paper)}
+.theme-btn.active{background:var(--keep);border-color:var(--keep);color:#062226}
+.theme-btn.active:hover{color:#062226}
+
+body[data-theme="light"]{
+  --ink:#f2efe6;
+  --ink-2:#ece8dc;
+  --panel:#ffffff;
+  --panel-2:#f6f3ea;
+  --panel-3:#ece7da;
+  --line:#d9d3c2;
+  --line-soft:#e6e1d3;
+  --paper:#181b1f;
+  --paper-dim:#3c414a;
+  --muted:#5b616c;
+  --muted-2:#767c87;
+  --keep:#0c8a9c;
+  --keep-dim:#cdeef2;
+  --remove:#c1442f;
+  --remove-dim:#f6d9d2;
+  --remove-bright:#a83a27;
+  --amber:#9c6a17;
+}
+body[data-theme="light"] .frame{
+  background: repeating-conic-gradient(#eae6d9 0% 25%, #f1eee3 0% 50%) 50% / 16px 16px;
+}
+body[data-theme="light"] .btn-strip{color:#fff}
+body[data-theme="light"] ::selection{background:var(--keep);color:#fff}
+
+/* ---------- empty / upload state ---------- */
+#emptyState{padding:64px 0 40px}
+.intake{
+  border:2px dashed var(--paper-dim);
+  border-radius:6px;
+  padding:70px 24px;
+  text-align:center;
+  position:relative;
+  transition:border-color .18s ease, background .18s ease;
+  background:var(--panel);
+}
+.intake.dragover{border-color:var(--keep);background:rgba(87,199,212,0.05)}
+.intake-corner{position:absolute;width:16px;height:16px;border:2px solid var(--muted-2);opacity:.6}
+.intake-corner.tl{top:14px;left:14px;border-right:0;border-bottom:0}
+.intake-corner.tr{top:14px;right:14px;border-left:0;border-bottom:0}
+.intake-corner.bl{bottom:14px;left:14px;border-right:0;border-top:0}
+.intake-corner.br{bottom:14px;right:14px;border-left:0;border-top:0}
+.intake-icon{font-family:var(--font-mono);font-size:34px;color:var(--muted-2);margin-bottom:18px;letter-spacing:0.1em}
+.intake h1{
+  font-family:var(--font-display);font-size:26px;font-weight:600;margin:0 0 10px;color:var(--paper);
+}
+.intake p{color:var(--muted);margin:0 0 26px;font-size:14px}
+.intake-browse{
+  display:inline-flex;align-items:center;gap:10px;
+  background:var(--paper);color:var(--ink);
+  font-family:var(--font-mono);font-size:12px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;
+  padding:13px 24px;border:none;border-radius:2px;
+}
+.intake-browse:hover{background:#fff}
+.intake-formats{
+  margin-top:26px;font-family:var(--font-mono);font-size:11px;color:var(--muted-2);letter-spacing:0.06em;
+}
+.intake-explain{
+  max-width:640px;margin:44px auto 0;padding-top:28px;border-top:1px solid var(--line-soft);
+  display:grid;grid-template-columns:repeat(3,1fr);gap:20px;text-align:left;
+}
+.intake-explain .step{font-family:var(--font-mono);font-size:11px;color:var(--muted-2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px}
+.intake-explain .desc{font-size:13px;color:var(--paper-dim)}
+.intake-privacy{
+  margin-top:18px;font-size:12px;color:var(--muted);
+}
+.intake-privacy b{color:var(--keep);font-weight:600}
+
+/* ---------- workspace ---------- */
+#workspace{padding-top:36px}
+.workspace-grid{display:grid;grid-template-columns:300px 1fr;gap:28px;align-items:start}
+
+.filmstrip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px}
+.film-item{
+  flex:0 0 auto;width:52px;height:52px;border-radius:2px;overflow:hidden;
+  border:2px solid var(--line);cursor:pointer;position:relative;background:var(--panel-2);
+}
+.film-item img{width:100%;height:100%;object-fit:cover}
+.film-item.active{border-color:var(--keep)}
+.film-item .badge{
+  position:absolute;bottom:0;right:0;width:14px;height:14px;background:var(--remove);
+  color:var(--ink);font-family:var(--font-mono);font-size:9px;display:flex;align-items:center;justify-content:center;
+}
+.film-item.done .badge{background:var(--keep)}
+.film-add{
+  flex:0 0 auto;width:52px;height:52px;border-radius:2px;border:1px dashed var(--line);
+  display:flex;align-items:center;justify-content:center;color:var(--muted-2);font-size:20px;background:none;
+}
+.film-add:hover{border-color:var(--keep);color:var(--keep)}
+
+.preview-card{border:1px solid var(--line);border-radius:4px;background:var(--panel);overflow:hidden}
+.frame{
+  position:relative;aspect-ratio:4/3;background:
+    repeating-conic-gradient(#1a1e24 0% 25%, #161a20 0% 50%) 50% / 16px 16px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+.frame img{max-width:100%;max-height:100%;object-fit:contain}
+.frame-corner{position:absolute;width:14px;height:14px;border:2px solid rgba(236,232,223,0.55);pointer-events:none}
+.frame-corner.tl{top:8px;left:8px;border-right:0;border-bottom:0}
+.frame-corner.tr{top:8px;right:8px;border-left:0;border-bottom:0}
+.frame-corner.bl{bottom:8px;left:8px;border-right:0;border-top:0}
+.frame-corner.br{bottom:8px;right:8px;border-left:0;border-top:0}
+
+.evidence-tag{margin:0;padding:16px 18px;font-family:var(--font-mono);font-size:12px;border-top:1px dashed var(--line)}
+.evidence-tag .row{display:flex;justify-content:space-between;gap:12px;padding:4px 0;color:var(--muted)}
+.evidence-tag .row b{color:var(--paper-dim);font-weight:500;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
+.evidence-tag .case-id{color:var(--keep);letter-spacing:0.05em}
+
+/* ---------- metadata pane ---------- */
+.pane-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.pane-header h2{font-family:var(--font-display);font-size:17px;font-weight:600;margin:0}
+.pane-header .count{font-family:var(--font-mono);font-size:11px;color:var(--muted-2);margin-left:10px}
+.quick-actions{display:flex;gap:8px}
+.qbtn{
+  background:none;border:1px solid var(--line);color:var(--muted);
+  font-family:var(--font-mono);font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;
+  padding:7px 12px;border-radius:2px;
+}
+.qbtn:hover{border-color:var(--paper-dim);color:var(--paper)}
+
+.category-list{display:flex;flex-direction:column;gap:8px}
+.empty-clean{
+  border:1px solid var(--line-soft);border-radius:4px;padding:28px 20px;text-align:center;
+  color:var(--muted);font-size:13px;
+}
+.empty-clean b{color:var(--keep)}
+
+.cat-card{
+  position:relative;
+  border:1px solid var(--line);border-left:3px solid var(--line);border-radius:3px;background:var(--panel);
+  transition:border-left-color .15s ease, background-color .15s ease;
+}
+.cat-card.decided-remove{border-left-color:var(--remove-bright);background:rgba(217,88,76,0.05)}
+.cat-card.decided-keep{border-left-color:var(--keep);background:rgba(87,199,212,0.04)}
+.cat-header{
+  display:flex;align-items:center;gap:10px;padding:13px 16px;flex-wrap:wrap;
+}
+.cat-title-btn{
+  display:flex;align-items:center;gap:12px;flex:1 1 220px;min-width:0;
+  background:none;border:none;padding:0;text-align:left;color:var(--paper);
+}
+.cat-icon{font-family:var(--font-mono);font-size:14px;width:20px;flex:0 0 20px;text-align:center;color:var(--paper-dim)}
+.cat-name{font-family:var(--font-display);font-weight:600;font-size:14px;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cat-count{font-family:var(--font-mono);font-size:11px;color:var(--muted-2);white-space:nowrap;flex:0 0 auto}
+.cat-chevron{font-size:11px;color:var(--muted-2);width:12px;flex:0 0 12px;text-align:center;transition:transform .15s}
+.cat-card.expanded .cat-chevron{transform:rotate(90deg)}
+
+.cat-decision{display:flex;gap:6px;flex:0 0 auto;margin-left:auto}
+.decision-btn{
+  -webkit-appearance:none;appearance:none;
+  font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:0.08em;
+  padding:7px 14px;border-radius:2px;border:1px solid var(--line);
+  background:var(--panel-2);color:var(--paper-dim);white-space:nowrap;
+}
+.decision-btn:hover{border-color:var(--paper-dim);color:var(--paper)}
+.decision-btn.keep.active{background:var(--keep);border-color:var(--keep);color:#062226}
+.decision-btn.keep.active:hover{color:#062226}
+.decision-btn.remove.active{background:var(--remove);border-color:var(--remove);color:#1f0906}
+.decision-btn.remove.active:hover{color:#1f0906}
+
+.cat-body{border-top:1px solid var(--line-soft);padding:4px 16px 12px}
+.field-row{
+  display:flex;gap:14px;justify-content:space-between;padding:7px 0;
+  font-family:var(--font-mono);font-size:11.5px;border-bottom:1px solid var(--line-soft);
+}
+.field-row:last-child{border-bottom:none}
+.field-label{color:var(--paper-dim);flex:0 0 auto;max-width:45%}
+.field-value{color:var(--muted);text-align:right;word-break:break-word}
+
+/* ---------- action bar ---------- */
+.action-bar{
+  margin-top:20px;border:1px solid var(--line);border-radius:4px;background:var(--panel-2);
+  padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.summary{flex:1 1 220px;font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.summary b{color:var(--paper)}
+.btn{
+  font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;
+  padding:13px 22px;border-radius:2px;border:1px solid transparent;white-space:nowrap;
+}
+.btn-strip{background:var(--remove);color:#1a0a08}
+.btn-strip:hover{background:var(--remove-bright)}
+.btn-strip:disabled{background:var(--panel-3);color:var(--muted-2);cursor:not-allowed}
+.btn-ghost{background:none;border-color:var(--line);color:var(--paper-dim)}
+.btn-ghost:hover{border-color:var(--paper-dim)}
+.btn-keep{background:var(--keep);color:#062226}
+.btn-keep:hover{background:#6fd6e2}
+
+/* ---------- result panel ---------- */
+.result-log{
+  margin-top:16px;border:1px solid var(--keep-dim);border-radius:4px;background:rgba(87,199,212,0.05);
+  padding:18px 20px;
+}
+.result-log h3{
+  font-family:var(--font-mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--keep);
+  margin:0 0 12px;
+}
+.result-sizes{display:flex;gap:26px;margin-bottom:14px;flex-wrap:wrap}
+.result-sizes .stat{font-family:var(--font-mono)}
+.result-sizes .stat .num{font-size:20px;font-weight:600;color:var(--paper)}
+.result-sizes .stat .lbl{font-size:10px;color:var(--muted-2);text-transform:uppercase;letter-spacing:0.08em}
+.removed-manifest{list-style:none;margin:0 0 16px;padding:0;font-family:var(--font-mono);font-size:12px;color:var(--paper-dim)}
+.removed-manifest li{padding:3px 0;display:flex;gap:8px;align-items:baseline}
+.removed-manifest li::before{content:"—";color:var(--remove)}
+.result-note{font-size:12px;color:var(--amber);margin-bottom:14px}
+.result-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* ---------- toast / errors ---------- */
+.file-error{
+  border:1px solid var(--remove-dim);background:rgba(217,88,76,0.08);border-radius:4px;
+  padding:14px 16px;font-size:13px;color:var(--paper-dim);margin-bottom:10px;
+}
+.file-error b{color:var(--remove-bright);display:block;font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
+
+.spinner-line{
+  height:2px;background:linear-gradient(90deg,transparent,var(--keep),transparent);
+  background-size:200% 100%;animation:scan 1.1s linear infinite;
+}
+@keyframes scan{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.processing-note{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:8px}
+
+/* ---------- footer ---------- */
+.footnote{margin-top:60px;padding-top:20px;border-top:1px solid var(--line-soft);font-family:var(--font-mono);font-size:11px;color:var(--muted-2);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+/* ---------- responsive ---------- */
+@media (max-width:860px){
+  .workspace-grid{grid-template-columns:1fr}
+  .intake{padding:48px 16px}
+  .intake-explain{grid-template-columns:1fr;gap:14px}
+}
+@media (max-width:520px){
+  .app{padding:0 16px 60px}
+  .topbar{padding:20px 0 16px}
+  .intake h1{font-size:21px}
+  .evidence-tag .row b{max-width:120px}
+  .action-bar{flex-direction:column;align-items:stretch}
+  .result-sizes{gap:18px}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="inkRough" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.4"/>
+  </filter>
+</svg>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">ZERO<span>TRACE</span></div>
+      <div class="brand-sub">Metadata Redaction Utility</div>
+    </div>
+    <div class="theme-toggle" role="group" aria-label="Color theme">
+      <button type="button" class="theme-btn active" data-theme-btn="dark">Dark</button>
+      <button type="button" class="theme-btn" data-theme-btn="light">Light</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section id="emptyState">
+      <div class="intake" id="intake">
+        <span class="intake-corner tl"></span><span class="intake-corner tr"></span>
+        <span class="intake-corner bl"></span><span class="intake-corner br"></span>
+        <div class="intake-icon">[ ◌ ]</div>
+        <h1>Drop image evidence to begin</h1>
+        <p>or click below to browse your files</p>
+        <button class="intake-browse" id="browseBtn" type="button">Select Images</button>
+        <div class="intake-formats">JPEG · PNG · WEBP full field-level control &nbsp;·&nbsp; GIF / BMP / TIFF / others — full strip</div>
+
+        <div class="intake-explain">
+          <div>
+            <div class="step">01 — Upload</div>
+            <div class="desc">Drop in one or more images. Everything is parsed locally, in memory, in your browser.</div>
+          </div>
+          <div>
+            <div class="step">02 — Choose</div>
+            <div class="desc">Only the metadata categories actually found in your file appear as toggles. Flip on what you want gone.</div>
+          </div>
+          <div>
+            <div class="step">03 — Download</div>
+            <div class="desc">Get a clean copy back instantly. The original pixel data is untouched — only metadata is altered.</div>
+          </div>
+        </div>
+        <div class="intake-privacy"><b>Nothing is uploaded anywhere.</b> Parsing, redaction, and file generation all happen on-device.</div>
+      </div>
+    </section>
+
+    <section id="workspace" hidden>
+      <div class="workspace-grid">
+        <aside class="preview-pane">
+          <div class="filmstrip" id="filmstrip"></div>
+          <div class="preview-card">
+            <div class="frame">
+              <span class="frame-corner tl"></span><span class="frame-corner tr"></span>
+              <span class="frame-corner bl"></span><span class="frame-corner br"></span>
+              <img id="previewImg" alt="Preview of selected image">
+            </div>
+            <dl class="evidence-tag" id="fileInfoTag"></dl>
+          </div>
+        </aside>
+
+        <section class="metadata-pane">
+          <div class="pane-header">
+            <h2>Detected Metadata <span class="count" id="paneCount"></span></h2>
+            <div class="quick-actions">
+              <button class="qbtn" id="selectAllBtn" type="button">Remove All</button>
+              <button class="qbtn" id="selectNoneBtn" type="button">Keep All</button>
+            </div>
+          </div>
+          <div id="categoryList" class="category-list"></div>
+          <div id="resultLog" class="result-log" hidden></div>
+        </section>
+      </div>
+
+      <div class="action-bar" id="actionBar">
+        <div class="summary" id="summaryText"></div>
+        <button class="btn btn-ghost" id="stripAllBtn" type="button" hidden>Strip All Images</button>
+        <button class="btn btn-strip" id="stripBtn" type="button">Strip Metadata</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footnote">
+    <span>ZEROTRACE — runs entirely on-device</span>
+    <span id="fileCount"></span>
+  </footer>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" multiple hidden>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   CONSTANTS
+   ============================================================ */
+
+var CATEGORY_ORDER = ["location","datetime","camera","author","thumbnail","technical","other"];
+var CATEGORY_META = {
+  location:  {label:"GPS & Location",              icon:"◎"},
+  datetime:  {label:"Date & Time",                 icon:"◷"},
+  camera:    {label:"Camera & Shooting Info",      icon:"▣"},
+  author:    {label:"Author, Copyright & Comments",icon:"✎"},
+  thumbnail: {label:"Embedded Thumbnail",          icon:"▤"},
+  technical: {label:"Color Profile & Technical",   icon:"≡"},
+  other:     {label:"Other / Unrecognized",        icon:"✦"}
+};
+
+var DATETIME_TAGS = new Set(["DateTime","DateTimeOriginal","DateTimeDigitized","SubSecTime",
+  "SubSecTimeOriginal","SubSecTimeDigitized","OffsetTime","OffsetTimeOriginal","OffsetTimeDigitized"]);
+var CAMERA_TAGS = new Set(["Make","Model","LensMake","LensModel","LensSpecification","Software",
+  "FNumber","ExposureTime","ISOSpeedRatings","PhotographicSensitivity","FocalLength",
+  "FocalLengthIn35mmFilm","Flash","MeteringMode","WhiteBalance","ExposureProgram",
+  "ExposureBiasValue","ExposureMode","SceneCaptureType","BodySerialNumber","LensSerialNumber",
+  "ShutterSpeedValue","ApertureValue","MaxApertureValue","SensingMethod","DigitalZoomRatio",
+  "Contrast","Saturation","Sharpness","GainControl","CustomRendered","SubjectDistanceRange"]);
+var AUTHOR_TAGS = new Set(["Artist","Copyright","ImageDescription","UserComment","XPTitle",
+  "XPComment","XPAuthor","XPKeywords","XPSubject","CameraOwnerName","OwnerName","RelatedSoundFile",
+  "ImageUniqueID"]);
+var TECH_TAGS = new Set(["ColorSpace","ComponentsConfiguration","YCbCrPositioning","ResolutionUnit",
+  "XResolution","YResolution","ExifVersion","FlashpixVersion","WhitePoint","PrimaryChromaticities",
+  "YCbCrCoefficients","GammaValue","PixelXDimension","PixelYDimension","ExifImageWidth",
+  "ExifImageHeight","YCbCrSubSampling"]);
+// internal TIFF structure pointers — never real content, never shown as a "field"
+var SKIP_TAGS = new Set(["ExifTag","GPSTag","InteropTag","JPEGInterchangeFormat",
+  "JPEGInterchangeFormatLength","StripOffsets","StripByteCounts"]);
+
+var ALWAYS_KEEP_PNG = new Set(["IHDR","PLTE","IDAT","IEND","tRNS","acTL","fcTL","fdAT"]);
+var PNG_CHUNK_CATEGORY = {
+  tIME:"datetime", tEXt:"author", zTXt:"author", iTXt:"author", eXIf:"camera",
+  pHYs:"technical", sRGB:"technical", gAMA:"technical", cHRM:"technical", iCCP:"technical",
+  sBIT:"technical", hIST:"technical", sPLT:"technical", bKGD:"technical"
+};
+
+var WEBP_ALWAYS_KEEP = new Set(["VP8 ","VP8L","VP8X","ALPH","ANIM","ANMF"]);
+var WEBP_CHUNK_CATEGORY = {EXIF:"camera", "XMP ":"author", ICCP:"technical"};
+var WEBP_FLAG_BITS = {ICCP:0x20, ALPH:0x10, EXIF:0x08, "XMP ":0x04};
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+
+function $(id){ return document.getElementById(id); }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+function formatBytes(n){
+  if (n < 1024) return n + " B";
+  if (n < 1024*1024) return (n/1024).toFixed(1) + " KB";
+  return (n/(1024*1024)).toFixed(2) + " MB";
+}
+function readFileAsArrayBuffer(file){
+  return new Promise(function(resolve, reject){
+    var r = new FileReader();
+    r.onload = function(){ resolve(r.result); };
+    r.onerror = function(){ reject(new Error("Could not read file")); };
+    r.readAsArrayBuffer(file);
+  });
+}
+function readFileAsDataURL(file){
+  return new Promise(function(resolve, reject){
+    var r = new FileReader();
+    r.onload = function(){ resolve(r.result); };
+    r.onerror = function(){ reject(new Error("Could not read file")); };
+    r.readAsDataURL(file);
+  });
+}
+function bytesToDataURL(bytes, mime){
+  var binary = "";
+  var chunk = 0x8000;
+  for (var i=0; i<bytes.length; i+=chunk){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i+chunk, bytes.length)));
+  }
+  return "data:" + mime + ";base64," + btoa(binary);
+}
+function concatUint8(arrays){
+  var total = arrays.reduce(function(s,a){ return s + a.length; }, 0);
+  var out = new Uint8Array(total);
+  var off = 0;
+  arrays.forEach(function(a){ out.set(a, off); off += a.length; });
+  return out;
+}
+function readAscii(bytes, start, len){
+  var s = "";
+  var end = Math.min(start+len, bytes.length);
+  for (var i=start; i<end; i++) s += String.fromCharCode(bytes[i]);
+  return s;
+}
+function genCaseId(){
+  var n = Math.floor(Math.random()*900000+100000);
+  return "ZT-" + n;
+}
+function fmtRational(pair){
+  if (!Array.isArray(pair)) return String(pair);
+  var n = pair[0], d = pair[1];
+  if (d === 0) return String(n);
+  var v = n/d;
+  return Number.isInteger(v) ? String(v) : v.toFixed(3);
+}
+function formatExifValue(value){
+  if (value == null) return "";
+  if (typeof value === "string") {
+    var t = value.replace(/\u0000+$/,"").trim();
+    return t || "(empty)";
+  }
+  if (Array.isArray(value)){
+    if (value.length === 2 && typeof value[0] === "number" && typeof value[1] === "number"){
+      return fmtRational(value);
+    }
+    if (Array.isArray(value[0])){
+      return value.map(function(p){ return Array.isArray(p) ? fmtRational(p) : p; }).join(", ");
+    }
+    return value.join(", ");
+  }
+  return String(value);
+}
+function dmsToDecimal(dms, ref){
+  if (!dms || dms.length < 3) return null;
+  var toNum = function(r){ return (Array.isArray(r) && r[1]) ? r[0]/r[1] : (Array.isArray(r) ? r[0] : r); };
+  var d = toNum(dms[0]), m = toNum(dms[1]), s = toNum(dms[2]);
+  var dec = d + m/60 + s/3600;
+  if (ref === "S" || ref === "W") dec = -dec;
+  return dec;
+}
+
+/* ============================================================
+   JPEG: segment scanner (XMP / IPTC / ICC / COM) — coarse layer
+   ============================================================ */
+
+function parseJPEGSegments(bytes){
+  if (bytes[0] !== 0xFF || bytes[1] !== 0xD8) throw new Error("Not a valid JPEG (bad SOI marker)");
+  var pos = 2;
+  var segments = [];
+  var guard = 0;
+  while (pos < bytes.length && guard < 20000){
+    guard++;
+    if (bytes[pos] !== 0xFF) { break; }
+    var marker = bytes[pos+1];
+    while (marker === 0xFF && pos+1 < bytes.length){ pos++; marker = bytes[pos+1]; }
+    if (marker === 0xD8 || marker === 0x01 || (marker >= 0xD0 && marker <= 0xD7)){
+      segments.push({marker:marker, start:pos, dataStart:pos+2, dataLength:0, end:pos+2});
+      pos += 2;
+      continue;
+    }
+    if (marker === 0xD9){
+      segments.push({marker:marker, start:pos, dataStart:pos+2, dataLength:0, end:pos+2});
+      break;
+    }
+    if (marker === 0xDA){
+      var sosLen = (bytes[pos+2] << 8) | bytes[pos+3];
+      var dataStart = pos + 2 + sosLen;
+      segments.push({marker:marker, start:pos, dataStart:dataStart, dataLength: bytes.length-dataStart, end:bytes.length, isScanTail:true});
+      pos = bytes.length;
+      continue;
+    }
+    if (pos+3 >= bytes.length) break;
+    var length = (bytes[pos+2] << 8) | bytes[pos+3];
+    if (length < 2) break;
+    var ds = pos + 4;
+    var dl = length - 2;
+    var end = pos + 2 + length;
+    if (end > bytes.length) break;
+    segments.push({marker:marker, start:pos, dataStart:ds, dataLength:dl, end:end});
+    pos = end;
+  }
+  return segments;
+}
+
+function categorizeJPEGSegment(seg, bytes){
+  var marker = seg.marker;
+  if (marker === 0xE1){
+    var id6 = readAscii(bytes, seg.dataStart, 6);
+    if (id6.indexOf("Exif") === 0) return null; // handled by piexif layer
+    var id29 = readAscii(bytes, seg.dataStart, 29);
+    if (id29.indexOf("http://ns.adobe.com/xap") === 0) return {category:"author", label:"XMP Metadata Packet"};
+    return {category:"other", label:"APP1 Metadata Segment"};
+  }
+  if (marker === 0xE2){
+    var id12 = readAscii(bytes, seg.dataStart, 12);
+    if (id12.indexOf("ICC_PROFILE") === 0) return {category:"technical", label:"ICC Color Profile"};
+    return {category:"other", label:"APP2 Metadata Segment"};
+  }
+  if (marker === 0xED){
+    var id14 = readAscii(bytes, seg.dataStart, 14);
+    if (id14.indexOf("Photoshop 3.0") === 0) return {category:"author", label:"IPTC / Photoshop Metadata"};
+    return {category:"other", label:"APP13 Metadata Segment"};
+  }
+  if (marker === 0xFE) return {category:"author", label:"JPEG Comment"};
+  if (marker >= 0xE3 && marker <= 0xEF && marker !== 0xEE) return {category:"other", label:"APP" + (marker-0xE0) + " Metadata Segment"};
+  return null;
+}
+
+function categorizeExifTag(ifd, tagName){
+  if (ifd === "GPS") return "location";
+  if (ifd === "1st") return "thumbnail";
+  if (DATETIME_TAGS.has(tagName)) return "datetime";
+  if (CAMERA_TAGS.has(tagName)) return "camera";
+  if (AUTHOR_TAGS.has(tagName)) return "author";
+  if (TECH_TAGS.has(tagName)) return "technical";
+  return "other";
+}
+
+function analyzeJPEG(bytes, dataUrl){
+  var fields = [];
+  var segments = [];
+  try { segments = parseJPEGSegments(bytes); } catch(e){ segments = []; }
+
+  segments.forEach(function(seg){
+    var info = categorizeJPEGSegment(seg, bytes);
+    if (!info) return;
+    fields.push({
+      id: "seg-" + seg.start,
+      category: info.category,
+      tagName: info.label,
+      valueDisplay: formatBytes(seg.dataLength) + " segment",
+      kind: "seg",
+      segStart: seg.start
+    });
+  });
+
+  var exifDict = null;
+  try { exifDict = piexif.load(dataUrl); } catch(e){ exifDict = null; }
+
+  if (exifDict){
+    var gpsLat = null, gpsLatRef = null, gpsLon = null, gpsLonRef = null;
+    ["0th","Exif","GPS","1st","Interop"].forEach(function(ifd){
+      var dict = exifDict[ifd];
+      if (!dict) return;
+      Object.keys(dict).forEach(function(tagIdStr){
+        var tagId = Number(tagIdStr);
+        var tagInfo = (piexif.TAGS[ifd] && piexif.TAGS[ifd][tagId]) || null;
+        var tagName = tagInfo ? tagInfo.name : ("Tag" + tagId);
+        var value = dict[tagId];
+
+        if (SKIP_TAGS.has(tagName)) return;
+        if (ifd === "GPS" && tagName === "GPSLatitude"){ gpsLat = value; return; }
+        if (ifd === "GPS" && tagName === "GPSLatitudeRef"){ gpsLatRef = value; return; }
+        if (ifd === "GPS" && tagName === "GPSLongitude"){ gpsLon = value; return; }
+        if (ifd === "GPS" && tagName === "GPSLongitudeRef"){ gpsLonRef = value; return; }
+
+        var cat = categorizeExifTag(ifd, tagName);
+        fields.push({
+          id: "exif-" + ifd + "-" + tagId,
+          category: cat,
+          tagName: (ifd === "1st" ? "Thumbnail: " : "") + tagName,
+          valueDisplay: formatExifValue(value),
+          kind: "exif"
+        });
+      });
+    });
+    if (gpsLat && gpsLon){
+      var latDec = dmsToDecimal(gpsLat, gpsLatRef);
+      var lonDec = dmsToDecimal(gpsLon, gpsLonRef);
+      if (latDec != null && lonDec != null){
+        fields.unshift({
+          id: "exif-GPS-coords",
+          category: "location",
+          tagName: "Coordinates",
+          valueDisplay: Math.abs(latDec).toFixed(5) + "° " + (latDec<0?"S":"N") + ", " + Math.abs(lonDec).toFixed(5) + "° " + (lonDec<0?"W":"E"),
+          kind: "exif"
+        });
+      }
+    }
+    if (exifDict.thumbnail){
+      fields.push({
+        id: "exif-thumb-blob",
+        category: "thumbnail",
+        tagName: "Embedded Thumbnail Image",
+        valueDisplay: "~" + formatBytes(exifDict.thumbnail.length) + " JPEG thumbnail",
+        kind: "exif"
+      });
+    }
+  }
+
+  return {
+    format: "jpeg",
+    mime: "image/jpeg",
+    fields: fields,
+    context: {bytes: bytes, exifDict: exifDict, segments: segments}
+  };
+}
+
+function stripJPEG(analysis, removeSet){
+  var bytes = analysis.context.bytes;
+  var segments = analysis.context.segments;
+  var removedLabels = new Set();
+
+  // 1. remove chosen non-EXIF segments
+  var removeStarts = new Set();
+  analysis.fields.forEach(function(f){
+    if (f.kind === "seg" && removeSet.has(f.category)){
+      removeStarts.add(f.segStart);
+      removedLabels.add(CATEGORY_META[f.category].label);
+    }
+  });
+  var keptChunks = [bytes.subarray(0,2)];
+  segments.forEach(function(seg){
+    if (!removeStarts.has(seg.start)){
+      keptChunks.push(bytes.subarray(seg.start, seg.end));
+    }
+  });
+  var strippedBytes = concatUint8(keptChunks);
+  var workingUrl = bytesToDataURL(strippedBytes, "image/jpeg");
+
+  // 2. tag-level EXIF filtering
+  var exifDict = analysis.context.exifDict;
+  var anyExifCat = ["location","datetime","camera","author","thumbnail","technical","other"].some(function(c){
+    return removeSet.has(c);
+  });
+
+  if (exifDict && anyExifCat){
+    var clone = JSON.parse(JSON.stringify(exifDict));
+    if (!clone.thumbnail) clone.thumbnail = exifDict.thumbnail || null;
+    ["0th","Exif","GPS","1st","Interop"].forEach(function(ifd){
+      var dict = clone[ifd];
+      if (!dict) return;
+      Object.keys(dict).forEach(function(tagIdStr){
+        var tagId = Number(tagIdStr);
+        var tagInfo = (piexif.TAGS[ifd] && piexif.TAGS[ifd][tagId]) || null;
+        var tagName = tagInfo ? tagInfo.name : ("Tag"+tagId);
+        var cat = categorizeExifTag(ifd, tagName);
+        if (removeSet.has(cat)){
+          delete dict[tagId];
+          removedLabels.add(CATEGORY_META[cat].label);
+        }
+      });
+    });
+    if (removeSet.has("location")){ clone.GPS = {}; removedLabels.add(CATEGORY_META.location.label); }
+    if (removeSet.has("thumbnail")){ clone["1st"] = {}; clone.thumbnail = null; removedLabels.add(CATEGORY_META.thumbnail.label); }
+
+    var isEmpty = ["0th","Exif","GPS","1st","Interop"].every(function(ifd){
+      return !clone[ifd] || Object.keys(clone[ifd]).length === 0;
+    }) && !clone.thumbnail;
+    if (isEmpty){
+      try {
+        var emptyUrl = piexif.remove(workingUrl);
+        return {dataUrl: emptyUrl, removedLabels: Array.from(removedLabels), fallbackUsed:false};
+      } catch(eEmpty){ /* fall through to normal path */ }
+    }
+
+    try {
+      var exifBytes = piexif.dump(clone);
+      var finalUrl = piexif.insert(exifBytes, workingUrl);
+      return {dataUrl: finalUrl, removedLabels: Array.from(removedLabels), fallbackUsed:false};
+    } catch(e){
+      try {
+        var fallbackUrl = piexif.remove(workingUrl);
+        removedLabels.add("All EXIF data (selective filtering failed for this file)");
+        return {dataUrl: fallbackUrl, removedLabels: Array.from(removedLabels), fallbackUsed:true};
+      } catch(e2){
+        return {dataUrl: workingUrl, removedLabels: Array.from(removedLabels), fallbackUsed:false};
+      }
+    }
+  }
+
+  return {dataUrl: workingUrl, removedLabels: Array.from(removedLabels), fallbackUsed:false};
+}
+
+/* ============================================================
+   PNG chunk parser
+   ============================================================ */
+
+function parsePNGChunks(bytes){
+  var sig = [137,80,78,71,13,10,26,10];
+  for (var i=0;i<8;i++){ if (bytes[i] !== sig[i]) throw new Error("Not a valid PNG (bad signature)"); }
+  var pos = 8;
+  var chunks = [];
+  var guard = 0;
+  while (pos < bytes.length && guard < 20000){
+    guard++;
+    if (pos+8 > bytes.length) break;
+    var length = (bytes[pos]<<24 | bytes[pos+1]<<16 | bytes[pos+2]<<8 | bytes[pos+3]) >>> 0;
+    var type = readAscii(bytes, pos+4, 4);
+    var dataStart = pos+8;
+    var end = pos + 12 + length;
+    if (end > bytes.length) break;
+    chunks.push({type:type, start:pos, dataStart:dataStart, dataLength:length, end:end});
+    pos = end;
+    if (type === "IEND") break;
+  }
+  return chunks;
+}
+
+function decodePNGText(chunk, bytes){
+  var start = chunk.dataStart, len = chunk.dataLength;
+  var nullIdx = -1;
+  for (var i=start; i<start+len && i<bytes.length; i++){ if (bytes[i]===0){ nullIdx=i; break; } }
+  if (nullIdx === -1) return {keyword:"(unknown)", value:"", compressed:false};
+  var keyword = readAscii(bytes, start, nullIdx-start);
+  if (chunk.type === "tEXt"){
+    var val = "";
+    for (var j=nullIdx+1;j<start+len;j++) val += String.fromCharCode(bytes[j]);
+    return {keyword:keyword, value:val, compressed:false};
+  }
+  if (chunk.type === "zTXt"){
+    return {keyword:keyword, value:"(compressed value)", compressed:true};
+  }
+  if (chunk.type === "iTXt"){
+    var compFlag = bytes[nullIdx+1];
+    return {keyword:keyword, value: compFlag ? "(compressed value)" : "(international text — value hidden, keyword shown)", compressed: !!compFlag};
+  }
+  return {keyword:keyword, value:"", compressed:false};
+}
+
+function analyzePNG(bytes){
+  var chunks = parsePNGChunks(bytes);
+  var fields = [];
+  chunks.forEach(function(chunk){
+    if (ALWAYS_KEEP_PNG.has(chunk.type)) return;
+    var isAncillary = chunk.type[0] === chunk.type[0].toLowerCase();
+    if (!isAncillary) return; // unknown critical chunk — never touch
+    var cat = PNG_CHUNK_CATEGORY[chunk.type] || "other";
+    var label = chunk.type;
+    var valueDisplay = formatBytes(chunk.dataLength);
+
+    if (chunk.type === "tEXt" || chunk.type === "zTXt" || chunk.type === "iTXt"){
+      var txt = decodePNGText(chunk, bytes);
+      label = txt.keyword + " (" + chunk.type + ")";
+      valueDisplay = txt.value.length > 140 ? txt.value.slice(0,140)+"…" : txt.value;
+      var kwLower = txt.keyword.toLowerCase();
+      if (kwLower.indexOf("date") !== -1 || kwLower.indexOf("time") !== -1) cat = "datetime";
+      else if (txt.keyword === "XML:com.adobe.xmp"){ cat = "author"; label = "XMP Metadata (embedded)"; }
+      else cat = "author";
+    } else if (chunk.type === "tIME"){
+      label = "Last Modified Timestamp";
+    } else if (chunk.type === "eXIf"){
+      label = "Embedded EXIF Profile (camera/date/GPS)";
+      cat = "camera";
+    } else if (chunk.type === "pHYs"){
+      label = "Physical Pixel Dimensions (DPI)";
+    } else if (chunk.type === "iCCP"){
+      label = "ICC Color Profile";
+    }
+
+    fields.push({
+      id: "chunk-" + chunk.start,
+      category: cat,
+      tagName: label,
+      valueDisplay: valueDisplay || "present",
+      kind: "chunk",
+      chunkStart: chunk.start
+    });
+  });
+  return {format:"png", mime:"image/png", fields:fields, context:{bytes:bytes, chunks:chunks}};
+}
+
+function stripPNG(analysis, removeSet){
+  var bytes = analysis.context.bytes;
+  var chunks = analysis.context.chunks;
+  var removeStarts = new Set();
+  var removedLabels = new Set();
+  analysis.fields.forEach(function(f){
+    if (removeSet.has(f.category)){
+      removeStarts.add(f.chunkStart);
+      removedLabels.add(CATEGORY_META[f.category].label);
+    }
+  });
+  var keptChunks = [bytes.subarray(0,8)];
+  chunks.forEach(function(c){
+    if (!removeStarts.has(c.start)) keptChunks.push(bytes.subarray(c.start, c.end));
+  });
+  var out = concatUint8(keptChunks);
+  return {bytes: out, removedLabels: Array.from(removedLabels)};
+}
+
+/* ============================================================
+   WEBP (RIFF) chunk parser
+   ============================================================ */
+
+function parseWebPChunks(bytes){
+  if (readAscii(bytes,0,4) !== "RIFF" || readAscii(bytes,8,4) !== "WEBP") throw new Error("Not a valid WebP file");
+  var pos = 12;
+  var chunks = [];
+  var guard = 0;
+  while (pos < bytes.length && guard < 20000){
+    guard++;
+    if (pos+8 > bytes.length) break;
+    var fourcc = readAscii(bytes, pos, 4);
+    var size = (bytes[pos+4] | bytes[pos+5]<<8 | bytes[pos+6]<<16 | bytes[pos+7]<<24) >>> 0;
+    var dataStart = pos+8;
+    var padded = size + (size % 2);
+    var end = dataStart + padded;
+    if (end > bytes.length) end = bytes.length;
+    chunks.push({type:fourcc, start:pos, dataStart:dataStart, dataLength:size, end:end});
+    pos = end;
+  }
+  return chunks;
+}
+
+function analyzeWebP(bytes){
+  var chunks = parseWebPChunks(bytes);
+  var fields = [];
+  chunks.forEach(function(chunk){
+    if (WEBP_ALWAYS_KEEP.has(chunk.type)) return;
+    var cat = WEBP_CHUNK_CATEGORY[chunk.type];
+    if (!cat) cat = "other";
+    var label = chunk.type === "EXIF" ? "Embedded EXIF Profile (camera/date/GPS)" :
+                chunk.type === "XMP " ? "XMP Metadata Packet" :
+                chunk.type === "ICCP" ? "ICC Color Profile" : (chunk.type.trim() + " chunk");
+    fields.push({
+      id: "wchunk-" + chunk.start,
+      category: cat,
+      tagName: label,
+      valueDisplay: formatBytes(chunk.dataLength),
+      kind: "wchunk",
+      chunkStart: chunk.start,
+      chunkType: chunk.type
+    });
+  });
+  return {format:"webp", mime:"image/webp", fields:fields, context:{bytes:bytes, chunks:chunks}};
+}
+
+function stripWebP(analysis, removeSet){
+  var bytes = analysis.context.bytes;
+  var chunks = analysis.context.chunks;
+  var removeStarts = new Set();
+  var removedLabels = new Set();
+  var removedTypes = new Set();
+  analysis.fields.forEach(function(f){
+    if (removeSet.has(f.category)){
+      removeStarts.add(f.chunkStart);
+      removedTypes.add(f.chunkType);
+      removedLabels.add(CATEGORY_META[f.category].label);
+    }
+  });
+
+  var keptChunks = [];
+  chunks.forEach(function(c){
+    if (removeStarts.has(c.start)) return;
+    var data = bytes.subarray(c.start, c.end);
+    if (c.type === "VP8X" && removedTypes.size){
+      data = new Uint8Array(data); // copy so we can mutate flags byte
+      var flagsIdx = 8; // dataStart offset within chunk = 8
+      var flags = data[flagsIdx];
+      removedTypes.forEach(function(t){
+        if (WEBP_FLAG_BITS[t] !== undefined) flags = flags & ~WEBP_FLAG_BITS[t];
+      });
+      data[flagsIdx] = flags;
+    }
+    keptChunks.push(data);
+  });
+
+  var body = concatUint8(keptChunks);
+  var totalSize = 4 + body.length; // 'WEBP' + chunks
+  var header = new Uint8Array(12);
+  header.set([0x52,0x49,0x46,0x46], 0); // RIFF
+  header[4] = totalSize & 0xFF; header[5] = (totalSize>>>8)&0xFF;
+  header[6] = (totalSize>>>16)&0xFF; header[7] = (totalSize>>>24)&0xFF;
+  header.set([0x57,0x45,0x42,0x50], 8); // WEBP
+  var out = concatUint8([header, body]);
+  return {bytes: out, removedLabels: Array.from(removedLabels)};
+}
+
+/* ============================================================
+   Fallback (canvas re-encode) for unsupported formats
+   ============================================================ */
+
+function analyzeFallback(file){
+  return {
+    format:"fallback", mime:"image/png", fields:[{
+      id:"fallback-all", category:"other", tagName:"All embedded metadata",
+      valueDisplay:"This format doesn't support field-level inspection here — removal re-encodes the image, which strips everything.",
+      kind:"fallback"
+    }],
+    context:{file:file}
+  };
+}
+function stripFallback(analysis){
+  return new Promise(function(resolve, reject){
+    var file = analysis.context.file;
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function(){
+      var canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      var ctx = canvas.getContext("2d");
+      ctx.drawImage(img,0,0);
+      canvas.toBlob(function(blob){
+        URL.revokeObjectURL(url);
+        if (!blob) { reject(new Error("Re-encoding failed")); return; }
+        resolve({blob:blob, removedLabels:["All embedded metadata (re-encoded)"]});
+      }, "image/png");
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error("Your browser could not decode this image format.")); };
+    img.src = url;
+  });
+}
+
+/* ============================================================
+   FORMAT DETECTION
+   ============================================================ */
+
+function detectFormat(bytes){
+  if (bytes[0]===0xFF && bytes[1]===0xD8 && bytes[2]===0xFF) return "jpeg";
+  if (bytes[0]===0x89 && bytes[1]===0x50 && bytes[2]===0x4E && bytes[3]===0x47) return "png";
+  if (readAscii(bytes,0,4)==="RIFF" && readAscii(bytes,8,4)==="WEBP") return "webp";
+  return "other";
+}
+
+/* ============================================================
+   APP STATE + RENDERING
+   ============================================================ */
+
+var state = { files: [], activeId: null };
+var idCounter = 0;
+
+function newFileRecord(file){
+  idCounter++;
+  return {
+    id: "f" + idCounter,
+    file: file,
+    name: file.name,
+    size: file.size,
+    caseId: genCaseId(),
+    status: "loading", // loading | ready | error | processed
+    error: null,
+    format: null,
+    mime: null,
+    analysis: null,
+    toggles: {}, // category -> true(remove) / false(keep)
+    dims: null,
+    previewUrl: null,
+    result: null // {blob, url, removedLabels, fallbackUsed}
+  };
+}
+
+function fieldsGroupedByCategory(fields){
+  var groups = {};
+  fields.forEach(function(f){
+    if (!groups[f.category]) groups[f.category] = [];
+    groups[f.category].push(f);
+  });
+  return groups;
+}
+
+function ensureToggles(rec){
+  var groups = fieldsGroupedByCategory(rec.analysis.fields);
+  Object.keys(groups).forEach(function(cat){
+    if (!(cat in rec.toggles)) rec.toggles[cat] = true; // default: remove
+  });
+}
+
+/* ---- loading a file ---- */
+function loadFile(file){
+  var rec = newFileRecord(file);
+  state.files.push(rec);
+  render();
+
+  readFileAsArrayBuffer(file).then(function(buf){
+    var bytes = new Uint8Array(buf);
+    var format = detectFormat(bytes);
+    rec.format = format;
+
+    var proceed = function(analysis, mime){
+      rec.analysis = analysis;
+      rec.mime = mime;
+      ensureToggles(rec);
+      rec.status = "ready";
+      var blobUrl = URL.createObjectURL(file);
+      rec.previewUrl = blobUrl;
+      var img = new Image();
+      img.onload = function(){ rec.dims = {w:img.naturalWidth, h:img.naturalHeight}; render(); };
+      img.src = blobUrl;
+      render();
+    };
+
+    try {
+      if (format === "jpeg"){
+        readFileAsDataURL(file).then(function(dataUrl){
+          try {
+            var analysis = analyzeJPEG(bytes, dataUrl);
+            proceed(analysis, "image/jpeg");
+          } catch(e){
+            var fb = analyzeFallback(file);
+            proceed(fb, "image/png");
+          }
+        });
+      } else if (format === "png"){
+        var analysisPng = analyzePNG(bytes);
+        proceed(analysisPng, "image/png");
+      } else if (format === "webp"){
+        var analysisWebp = analyzeWebP(bytes);
+        proceed(analysisWebp, "image/webp");
+      } else {
+        var fb2 = analyzeFallback(file);
+        proceed(fb2, "image/png");
+      }
+    } catch(e){
+      rec.status = "error";
+      rec.error = e.message || "Could not parse this file.";
+      render();
+    }
+  }).catch(function(e){
+    rec.status = "error";
+    rec.error = e.message || "Could not read this file.";
+    render();
+  });
+}
+
+function activeRecord(){
+  return state.files.find(function(f){ return f.id === state.activeId; }) || null;
+}
+
+/* ---- processing (strip) ---- */
+function processRecord(rec){
+  return new Promise(function(resolve){
+    var removeSet = new Set(Object.keys(rec.toggles).filter(function(c){ return rec.toggles[c]; }));
+
+    if (rec.analysis.format === "jpeg"){
+      var res = stripJPEG(rec.analysis, removeSet);
+      fetch(res.dataUrl).then(function(r){ return r.blob(); }).then(function(blob){
+        finishProcessing(rec, blob, res.removedLabels, res.fallbackUsed);
+        resolve();
+      });
+    } else if (rec.analysis.format === "png"){
+      var resP = stripPNG(rec.analysis, removeSet);
+      var blobP = new Blob([resP.bytes], {type:"image/png"});
+      finishProcessing(rec, blobP, resP.removedLabels, false);
+      resolve();
+    } else if (rec.analysis.format === "webp"){
+      var resW = stripWebP(rec.analysis, removeSet);
+      var blobW = new Blob([resW.bytes], {type:"image/webp"});
+      finishProcessing(rec, blobW, resW.removedLabels, false);
+      resolve();
+    } else {
+      stripFallback(rec.analysis).then(function(res2){
+        finishProcessing(rec, res2.blob, res2.removedLabels, true);
+        resolve();
+      }).catch(function(e){
+        rec.status = "error";
+        rec.error = e.message;
+        render();
+        resolve();
+      });
+    }
+  });
+}
+
+function finishProcessing(rec, blob, removedLabels, fallbackUsed){
+  if (rec.result && rec.result.url) URL.revokeObjectURL(rec.result.url);
+  var url = URL.createObjectURL(blob);
+  rec.result = {blob:blob, url:url, size:blob.size, removedLabels:removedLabels, fallbackUsed:fallbackUsed};
+  rec.status = "processed";
+  render();
+}
+
+function cleanFileName(name, mime){
+  var base = name.replace(/\.[^.]+$/, "");
+  var ext = mime === "image/jpeg" ? ".jpg" : mime === "image/webp" ? ".webp" : ".png";
+  return base + "-clean" + ext;
+}
+
+/* ============================================================
+   RENDERING
+   ============================================================ */
+
+function render(){
+  var empty = $("emptyState"), workspace = $("workspace");
+  if (state.files.length === 0){
+    empty.hidden = false; workspace.hidden = true;
+    $("fileCount").textContent = "";
+    return;
+  }
+  empty.hidden = true; workspace.hidden = false;
+  if (!state.activeId || !activeRecord()) state.activeId = state.files[state.files.length-1].id;
+
+  renderFilmstrip();
+  renderPreview();
+  renderCategoryPane();
+  renderActionBar();
+
+  $("fileCount").textContent = state.files.length + " file" + (state.files.length===1?"":"s") + " loaded";
+}
+
+function renderFilmstrip(){
+  var strip = $("filmstrip");
+  strip.innerHTML = "";
+  state.files.forEach(function(rec){
+    var item = document.createElement("div");
+    item.className = "film-item" + (rec.id===state.activeId ? " active":"") + (rec.status==="processed" ? " done":"");
+    item.title = rec.name;
+    if (rec.previewUrl){
+      var img = document.createElement("img");
+      img.src = rec.previewUrl; img.alt = "";
+      item.appendChild(img);
+    }
+    if (rec.status === "processed" || rec.status === "error"){
+      var badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = rec.status === "processed" ? "✓" : "!";
+      item.appendChild(badge);
+    }
+    item.addEventListener("click", function(){ state.activeId = rec.id; render(); });
+    strip.appendChild(item);
+  });
+  var add = document.createElement("button");
+  add.className = "film-add"; add.type="button"; add.textContent = "+";
+  add.title = "Add more images";
+  add.addEventListener("click", function(){ $("fileInput").click(); });
+  strip.appendChild(add);
+}
+
+function renderPreview(){
+  var rec = activeRecord();
+  if (!rec) return;
+  var img = $("previewImg");
+  img.src = rec.result ? rec.result.url : (rec.previewUrl || "");
+  img.alt = rec.name;
+
+  var tag = $("fileInfoTag");
+  var rows = [];
+  rows.push(["Case No.", rec.caseId, true]);
+  rows.push(["File", rec.name]);
+  rows.push(["Format", (rec.format||"unknown").toUpperCase()]);
+  if (rec.dims) rows.push(["Dimensions", rec.dims.w + " × " + rec.dims.h + " px"]);
+  rows.push(["Original Size", formatBytes(rec.size)]);
+  if (rec.result) rows.push(["Clean Size", formatBytes(rec.result.size)]);
+  rows.push(["Status", rec.status === "processed" ? "Redacted" : rec.status === "error" ? "Error" : rec.status === "loading" ? "Analyzing…" : "Ready"]);
+
+  tag.innerHTML = rows.map(function(r){
+    return '<div class="row"><span>'+escapeHtml(r[0])+'</span><b class="'+(r[2]?'case-id':'')+'">'+escapeHtml(r[1])+'</b></div>';
+  }).join("");
+}
+
+function renderCategoryPane(){
+  var rec = activeRecord();
+  var list = $("categoryList");
+  var resultLog = $("resultLog");
+  list.innerHTML = "";
+
+  if (!rec || rec.status === "loading"){
+    list.innerHTML = '<div class="empty-clean">Analyzing file structure…<div class="spinner-line" style="margin-top:14px"></div></div>';
+    resultLog.hidden = true;
+    $("paneCount").textContent = "";
+    return;
+  }
+  if (rec.status === "error"){
+    list.innerHTML = '<div class="file-error"><b>Could not process this file</b>' + escapeHtml(rec.error) + '</div>';
+    resultLog.hidden = true;
+    $("paneCount").textContent = "";
+    return;
+  }
+
+  var groups = fieldsGroupedByCategory(rec.analysis.fields);
+  var presentCats = CATEGORY_ORDER.filter(function(c){ return groups[c] && groups[c].length; });
+
+  if (presentCats.length === 0){
+    list.innerHTML = '<div class="empty-clean">No embedded metadata detected. <b>This image is already clean.</b></div>';
+    $("paneCount").textContent = "";
+  } else {
+    $("paneCount").textContent = "— " + presentCats.length + " categor" + (presentCats.length===1?"y":"ies") + " found";
+    presentCats.forEach(function(cat){
+      var fields = groups[cat];
+      var meta = CATEGORY_META[cat];
+      var willRemove = !!rec.toggles[cat];
+      var card = document.createElement("div");
+      card.className = "cat-card" + (willRemove ? " decided-remove" : " decided-keep");
+      card.dataset.cat = cat;
+
+      var header = document.createElement("div");
+      header.className = "cat-header";
+
+      var titleBtn = document.createElement("button");
+      titleBtn.type = "button";
+      titleBtn.className = "cat-title-btn";
+      titleBtn.innerHTML =
+        '<span class="cat-icon">'+meta.icon+'</span>' +
+        '<span class="cat-name">'+escapeHtml(meta.label)+'</span>' +
+        '<span class="cat-count">'+fields.length+' field'+(fields.length===1?'':'s')+'</span>' +
+        '<span class="cat-chevron">▸</span>';
+      titleBtn.addEventListener("click", function(){
+        card.classList.toggle("expanded");
+        body.hidden = !card.classList.contains("expanded");
+      });
+
+      var decision = document.createElement("div");
+      decision.className = "cat-decision";
+      var keepBtn = document.createElement("button");
+      keepBtn.type = "button";
+      keepBtn.className = "decision-btn keep" + (!willRemove ? " active" : "");
+      keepBtn.setAttribute("aria-pressed", String(!willRemove));
+      keepBtn.textContent = "Keep";
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "decision-btn remove" + (willRemove ? " active" : "");
+      removeBtn.setAttribute("aria-pressed", String(willRemove));
+      removeBtn.textContent = "Remove";
+
+      var setDecision = function(shouldRemove){
+        return function(ev){
+          ev.stopPropagation();
+          rec.toggles[cat] = shouldRemove;
+          renderCategoryPane();
+          renderActionBar();
+        };
+      };
+      keepBtn.addEventListener("click", setDecision(false));
+      removeBtn.addEventListener("click", setDecision(true));
+      decision.appendChild(keepBtn);
+      decision.appendChild(removeBtn);
+
+      header.appendChild(titleBtn);
+      header.appendChild(decision);
+
+      var body = document.createElement("div");
+      body.className = "cat-body";
+      body.hidden = true;
+      body.innerHTML = fields.map(function(f){
+        return '<div class="field-row"><span class="field-label">'+escapeHtml(f.tagName)+'</span><span class="field-value">'+escapeHtml(f.valueDisplay)+'</span></div>';
+      }).join("");
+
+      card.appendChild(header);
+      card.appendChild(body);
+      list.appendChild(card);
+    });
+  }
+
+  if (rec.status === "processed" && rec.result){
+    resultLog.hidden = false;
+    var savings = rec.size - rec.result.size;
+    var html = '<h3>Redaction Complete — ' + rec.caseId + '</h3>';
+    html += '<div class="result-sizes">';
+    html += '<div class="stat"><div class="num">'+formatBytes(rec.size)+'</div><div class="lbl">Original</div></div>';
+    html += '<div class="stat"><div class="num">'+formatBytes(rec.result.size)+'</div><div class="lbl">Clean</div></div>';
+    html += '<div class="stat"><div class="num">'+(savings>=0?"-":"+")+formatBytes(Math.abs(savings))+'</div><div class="lbl">Difference</div></div>';
+    html += '</div>';
+    if (rec.result.removedLabels.length){
+      html += '<ul class="removed-manifest">' + rec.result.removedLabels.map(function(l){ return '<li>'+escapeHtml(l)+'</li>'; }).join("") + '</ul>';
+    } else {
+      html += '<div style="font-size:12px;color:var(--muted);margin-bottom:14px">Nothing was selected for removal — output is a byte-identical copy.</div>';
+    }
+    if (rec.result.fallbackUsed){
+      html += '<div class="result-note">Note: this format only supports full metadata removal, so the image was fully re-encoded rather than selectively filtered.</div>';
+    }
+    html += '<div class="result-actions">';
+    html += '<a class="btn btn-keep" href="'+rec.result.url+'" download="'+escapeHtml(cleanFileName(rec.name, rec.mime))+'">Download Clean Image</a>';
+    html += '<button class="btn btn-ghost" id="reprocessBtn" type="button">Adjust & Re-run</button>';
+    html += '</div>';
+    resultLog.innerHTML = html;
+    var reBtn = $("reprocessBtn");
+    if (reBtn) reBtn.addEventListener("click", function(){ rec.status = "ready"; render(); });
+  } else {
+    resultLog.hidden = true;
+  }
+}
+
+function renderActionBar(){
+  var rec = activeRecord();
+  var bar = $("actionBar");
+  var summary = $("summaryText");
+  var stripBtn = $("stripBtn");
+  var stripAllBtn = $("stripAllBtn");
+
+  if (!rec || rec.status === "loading" || rec.status === "error"){
+    bar.style.opacity = "0.5";
+    stripBtn.disabled = true;
+    summary.textContent = rec && rec.status === "error" ? "Fix or remove the errored file to continue." : "Waiting for analysis…";
+  } else {
+    bar.style.opacity = "1";
+    var groups = fieldsGroupedByCategory(rec.analysis.fields);
+    var totalFields = rec.analysis.fields.length;
+    var removeFields = 0;
+    Object.keys(groups).forEach(function(cat){
+      if (rec.toggles[cat]) removeFields += groups[cat].length;
+    });
+    if (totalFields === 0){
+      summary.innerHTML = "This image has <b>no detectable metadata</b>.";
+      stripBtn.disabled = true;
+      stripBtn.textContent = "Nothing to Strip";
+    } else {
+      summary.innerHTML = "<b>" + removeFields + " of " + totalFields + "</b> metadata fields selected for removal";
+      stripBtn.disabled = false;
+      stripBtn.textContent = rec.status === "processed" ? "Re-run Redaction" : "Strip Metadata";
+    }
+  }
+
+  stripAllBtn.hidden = state.files.length < 2;
+}
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+
+function handleFiles(fileList){
+  Array.from(fileList).forEach(function(file){
+    if (file.type.indexOf("image/") !== 0 && !/\.(jpe?g|png|webp|gif|bmp|tiff?)$/i.test(file.name)) return;
+    loadFile(file);
+  });
+}
+
+$("browseBtn").addEventListener("click", function(){ $("fileInput").click(); });
+
+document.querySelectorAll(".theme-btn").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    var theme = btn.dataset.themeBtn;
+    document.body.dataset.theme = theme;
+    document.querySelectorAll(".theme-btn").forEach(function(b){
+      b.classList.toggle("active", b === btn);
+    });
+  });
+});
+$("fileInput").addEventListener("change", function(e){
+  handleFiles(e.target.files);
+  e.target.value = "";
+});
+
+var intake = $("intake");
+["dragenter","dragover"].forEach(function(evt){
+  intake.addEventListener(evt, function(e){ e.preventDefault(); intake.classList.add("dragover"); });
+});
+["dragleave","drop"].forEach(function(evt){
+  intake.addEventListener(evt, function(e){ e.preventDefault(); intake.classList.remove("dragover"); });
+});
+intake.addEventListener("drop", function(e){
+  if (e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+});
+
+document.body.addEventListener("dragover", function(e){ if (state.files.length){ e.preventDefault(); } });
+document.body.addEventListener("drop", function(e){
+  if (state.files.length && e.target.closest("#workspace")){
+    e.preventDefault();
+    if (e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+  }
+});
+
+$("selectAllBtn").addEventListener("click", function(){
+  var rec = activeRecord(); if (!rec) return;
+  Object.keys(rec.toggles).forEach(function(c){ rec.toggles[c] = true; });
+  renderCategoryPane(); renderActionBar();
+});
+$("selectNoneBtn").addEventListener("click", function(){
+  var rec = activeRecord(); if (!rec) return;
+  Object.keys(rec.toggles).forEach(function(c){ rec.toggles[c] = false; });
+  renderCategoryPane(); renderActionBar();
+});
+
+$("stripBtn").addEventListener("click", function(){
+  var rec = activeRecord(); if (!rec) return;
+  $("stripBtn").disabled = true;
+  $("stripBtn").textContent = "Processing…";
+  setTimeout(function(){
+    processRecord(rec).then(function(){
+      renderActionBar();
+    });
+  }, 30);
+});
+
+$("stripAllBtn").addEventListener("click", function(){
+  $("stripAllBtn").disabled = true;
+  $("stripAllBtn").textContent = "Processing…";
+  var chain = Promise.resolve();
+  state.files.forEach(function(rec){
+    chain = chain.then(function(){
+      if (rec.status === "ready" || rec.status === "processed") return processRecord(rec);
+    });
+  });
+  chain.then(function(){
+    $("stripAllBtn").disabled = false;
+    $("stripAllBtn").textContent = "Strip All Images";
+    render();
+  });
+});
+
+render();
+
+})();
+</script>
+</body>
+</html>
