@@ -1,6 +1,6 @@
 # ZEROTRACE
 
-**A metadata redaction utility for images — runs entirely in your browser.**
+**A metadata redaction utility for images, runs entirely in your browser.**
 
 ZEROTRACE lets you inspect and strip embedded metadata (GPS location, timestamps, camera info, author/copyright, thumbnails, color profiles, and more) from your images before sharing them. Nothing is uploaded anywhere, every byte of parsing, redaction, and file generation happens on-device, in a single self-contained HTML file.
 
