@@ -43,7 +43,7 @@ Everything runs client-side. Your images never leave your device, there is no ba
 
 ## Browser support
 
-Any modern browser with support for the Canvas API, `Blob`, and `ArrayBuffer` (Chrome, Firefox, Safari, Edge — desktop and mobile).
+Any modern browser with support for the Canvas API, `Blob`, and `ArrayBuffer` (Chrome, Firefox, Safari, Edge desktop and mobile).
 
 ## License
 
