@@ -2,11 +2,11 @@
 
 **A metadata redaction utility for images — runs entirely in your browser.**
 
-ZEROTRACE lets you inspect and strip embedded metadata (GPS location, timestamps, camera info, author/copyright, thumbnails, color profiles, and more) from your images before sharing them. Nothing is uploaded anywhere — every byte of parsing, redaction, and file generation happens on-device, in a single self-contained HTML file.
+ZEROTRACE lets you inspect and strip embedded metadata (GPS location, timestamps, camera info, author/copyright, thumbnails, color profiles, and more) from your images before sharing them. Nothing is uploaded anywhere, every byte of parsing, redaction, and file generation happens on-device, in a single self-contained HTML file.
 
 ## Features
 
-- **Field-level control, not a blind wipe.** Only the metadata categories actually present in your file are shown — pick exactly what to keep and what to remove.
+- **Field-level control, not a blind wipe.** Only the metadata categories actually present in your file are shown, pick exactly what to keep and what to remove.
 - **Explicit Keep / Remove decisions** for every detected category, with a clear visual state (no guesswork).
 - **Deep format support:**
   - **JPEG** — full EXIF tag-level filtering (0th/Exif/GPS/1st/Interop IFDs) plus XMP, IPTC/Photoshop, ICC, and comment segment removal.
@@ -17,11 +17,11 @@ ZEROTRACE lets you inspect and strip embedded metadata (GPS location, timestamps
 - **Batch support** — load multiple images, process one or all of them, download individually or as a ZIP.
 - **Before/after size comparison** and a manifest of exactly what was removed.
 - **Dark and light themes.**
-- **Zero network calls for image data.** Pixel data is verified byte-identical before and after redaction — only metadata is touched.
+- **Zero network calls for image data.** Pixel data is verified byte-identical before and after redaction only metadata is touched.
 
 ## Usage
 
-1. Open `zerotrace.html` in any modern browser (double-click it, or host it as a static file).
+1. Open `index.html` in any modern browser (double click it, or host it as a static file).
 2. Drop in one or more images, or click to browse.
 3. Review the detected metadata categories for each image and mark each one **Keep** or **Remove**.
 4. Click **Strip Metadata**.
@@ -39,7 +39,7 @@ No build step, no server, no dependencies to install — it's a single HTML file
 
 ## Privacy
 
-Everything runs client-side. Your images never leave your device — there is no backend, no upload endpoint, and no analytics.
+Everything runs client-side. Your images never leave your device, there is no backend, no upload endpoint, and no analytics.
 
 ## Browser support
 
