@@ -47,6 +47,7 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 img{max-width:100%;display:block}
+img[hidden]{display:none}
 button{font-family:inherit;color:inherit;cursor:pointer;-webkit-appearance:none;appearance:none;background:none;border:none}
 ::selection{background:var(--keep);color:var(--ink)}
 
@@ -164,6 +165,11 @@ body[data-theme="light"] ::selection{background:var(--keep);color:#fff}
   border:2px solid var(--line);cursor:pointer;position:relative;background:var(--panel-2);
 }
 .film-item img{width:100%;height:100%;object-fit:cover}
+.film-doc-label{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.04em;
+  color:var(--remove-bright);
+}
 .film-item.active{border-color:var(--keep)}
 .film-item .badge{
   position:absolute;bottom:0;right:0;width:14px;height:14px;background:var(--remove);
@@ -183,6 +189,15 @@ body[data-theme="light"] ::selection{background:var(--keep);color:#fff}
   display:flex;align-items:center;justify-content:center;overflow:hidden;
 }
 .frame img{max-width:100%;max-height:100%;object-fit:contain}
+.frame.frame-doc{background:var(--panel-2)}
+.preview-doc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;text-align:center;width:100%;height:100%}
+.doc-icon{
+  width:60px;height:76px;border:2px solid var(--remove-bright);border-radius:3px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-weight:700;font-size:12px;letter-spacing:0.06em;
+  color:var(--remove-bright);background:var(--panel);
+}
+.doc-name{font-family:var(--font-mono);font-size:11px;color:var(--muted);word-break:break-word;max-width:90%}
 .frame-corner{position:absolute;width:14px;height:14px;border:2px solid rgba(236,232,223,0.55);pointer-events:none}
 .frame-corner.tl{top:8px;left:8px;border-right:0;border-bottom:0}
 .frame-corner.tr{top:8px;right:8px;border-left:0;border-bottom:0}
@@ -195,6 +210,47 @@ body[data-theme="light"] ::selection{background:var(--keep);color:#fff}
 .evidence-tag .case-id{color:var(--keep);letter-spacing:0.05em}
 
 /* ---------- metadata pane ---------- */
+.pdf-back{
+  background:none;border:none;padding:0;margin-bottom:14px;cursor:pointer;
+  font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:0.04em;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.pdf-back:hover{color:var(--paper)}
+
+.pdf-chooser{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.chooser-card{
+  -webkit-appearance:none;appearance:none;
+  border:1px solid var(--line);border-radius:4px;background:var(--panel);
+  padding:26px 20px;text-align:left;display:flex;flex-direction:column;gap:10px;
+  transition:border-color .15s ease, background-color .15s ease;
+}
+.chooser-card:hover{border-color:var(--keep);background:var(--panel-2)}
+.chooser-icon{font-family:var(--font-mono);font-size:22px;color:var(--keep)}
+.chooser-title{font-family:var(--font-display);font-weight:600;font-size:16px;color:var(--paper)}
+.chooser-desc{font-size:12.5px;color:var(--muted);line-height:1.5}
+
+.page-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:14px}
+.page-tile{
+  -webkit-appearance:none;appearance:none;
+  border:1px solid var(--line);border-radius:3px;background:var(--panel);
+  padding:10px;display:flex;flex-direction:column;align-items:center;gap:8px;
+  transition:border-color .15s ease;
+}
+.page-tile:hover{border-color:var(--paper-dim)}
+.page-thumb-wrap{position:relative;width:100%;border-radius:2px;overflow:hidden;background:#fff;border:1px solid var(--line-soft)}
+.page-thumb-wrap img{width:100%;display:block}
+.page-mark-x{
+  position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
+  background:var(--remove);color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;opacity:0;transform:scale(0.6);
+  transition:opacity .12s ease, transform .12s ease;
+}
+.page-tile.marked{border-color:var(--remove-bright)}
+.page-tile.marked .page-thumb-wrap{opacity:0.4;filter:grayscale(0.4)}
+.page-tile.marked .page-mark-x{opacity:1;transform:scale(1)}
+.page-num{font-family:var(--font-mono);font-size:10.5px;color:var(--muted)}
+.page-tile.marked .page-num{color:var(--remove-bright)}
+
 .pane-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
 .pane-header h2{font-family:var(--font-display);font-size:17px;font-weight:600;margin:0}
 .pane-header .count{font-family:var(--font-mono);font-size:11px;color:var(--muted-2);margin-left:10px}
@@ -315,6 +371,7 @@ body[data-theme="light"] ::selection{background:var(--keep);color:#fff}
   .workspace-grid{grid-template-columns:1fr}
   .intake{padding:48px 16px}
   .intake-explain{grid-template-columns:1fr;gap:14px}
+  .pdf-chooser{grid-template-columns:1fr}
 }
 @media (max-width:520px){
   .app{padding:0 16px 60px}
@@ -353,10 +410,10 @@ body[data-theme="light"] ::selection{background:var(--keep);color:#fff}
         <span class="intake-corner tl"></span><span class="intake-corner tr"></span>
         <span class="intake-corner bl"></span><span class="intake-corner br"></span>
         <div class="intake-icon">[ ◌ ]</div>
-        <h1>Drop image</h1>
+        <h1>Drop evidence to begin</h1>
         <p>or click below to browse your files</p>
         <button class="intake-browse" id="browseBtn" type="button">Select Images</button>
-        <div class="intake-formats">JPEG · PNG · WEBP &nbsp;·&nbsp; GIF · BMP · TIFF · others — full strip</div>
+        <div class="intake-formats">JPEG · PNG · WEBP · PDF &nbsp;·&nbsp; GIF · BMP · TIFF · others</div>
 
         <div class="intake-explain">
           <div>
@@ -372,7 +429,7 @@ body[data-theme="light"] ::selection{background:var(--keep);color:#fff}
             <div class="desc">Get a clean copy back instantly. The original pixel data is untouched, only metadata is altered.</div>
           </div>
         </div>
-        <div class="intake-privacy"><b>Nothing is uploaded anywhere.</b> Parsing, redaction, and file generation all happen on-device.</div>
+        <div class="intake-privacy"><b>Nothing is uploaded anywhere.</b> Parsing, redaction, and file generation all happen on device.</div>
       </div>
     </section>
 
@@ -381,19 +438,24 @@ body[data-theme="light"] ::selection{background:var(--keep);color:#fff}
         <aside class="preview-pane">
           <div class="filmstrip" id="filmstrip"></div>
           <div class="preview-card">
-            <div class="frame">
+            <div class="frame" id="previewFrame">
               <span class="frame-corner tl"></span><span class="frame-corner tr"></span>
               <span class="frame-corner bl"></span><span class="frame-corner br"></span>
               <img id="previewImg" alt="Preview of selected image">
+              <div class="preview-doc" id="previewDoc" hidden>
+                <div class="doc-icon">PDF</div>
+                <div class="doc-name" id="previewDocName"></div>
+              </div>
             </div>
             <dl class="evidence-tag" id="fileInfoTag"></dl>
           </div>
         </aside>
 
         <section class="metadata-pane">
+          <button class="pdf-back" id="pdfBackBtn" type="button" hidden>← Choose a different view</button>
           <div class="pane-header">
-            <h2>Detected Metadata <span class="count" id="paneCount"></span></h2>
-            <div class="quick-actions">
+            <h2 id="paneTitle">Detected Metadata <span class="count" id="paneCount"></span></h2>
+            <div class="quick-actions" id="quickActions">
               <button class="qbtn" id="selectAllBtn" type="button">Remove All</button>
               <button class="qbtn" id="selectNoneBtn" type="button">Keep All</button>
             </div>
@@ -406,24 +468,31 @@ body[data-theme="light"] ::selection{background:var(--keep);color:#fff}
       <div class="action-bar" id="actionBar">
         <div class="summary" id="summaryText"></div>
         <button class="btn btn-ghost" id="stripAllBtn" type="button" hidden>Strip All Images</button>
+        <button class="btn btn-strip" id="removePagesBtn" type="button" hidden>Remove Marked Pages</button>
         <button class="btn btn-strip" id="stripBtn" type="button">Strip Metadata</button>
       </div>
     </section>
   </main>
 
   <footer class="footnote">
-    <span>ZEROTRACE: runs entirely on device</span>
+    <span>ZEROTRACE — runs entirely on-device</span>
     <span id="fileCount"></span>
   </footer>
 </div>
 
-<input type="file" id="fileInput" accept="image/*" multiple hidden>
+<input type="file" id="fileInput" accept="image/*,application/pdf" multiple hidden>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 (function(){
 "use strict";
+
+if (typeof pdfjsLib !== "undefined"){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
 
 /* ============================================================
    CONSTANTS
@@ -439,6 +508,21 @@ var CATEGORY_META = {
   technical: {label:"Color Profile & Technical",   icon:"≡"},
   other:     {label:"Other / Unrecognized",        icon:"✦"}
 };
+// category labels are photo-centric by default; PDFs get document-appropriate wording
+var PDF_CATEGORY_LABELS = {
+  datetime:  "Date & Time",
+  author:    "Title, Author & Keywords",
+  camera:    "Application & Producer Info",
+  technical: "Other Document Properties",
+  other:     "Embedded XMP Metadata"
+};
+function categoryLabel(format, cat){
+  if (format === "pdf" && PDF_CATEGORY_LABELS[cat]) return PDF_CATEGORY_LABELS[cat];
+  return CATEGORY_META[cat].label;
+}
+function categoryMetaFor(format, cat){
+  return {label: categoryLabel(format, cat), icon: CATEGORY_META[cat].icon};
+}
 
 var DATETIME_TAGS = new Set(["DateTime","DateTimeOriginal","DateTimeDigitized","SubSecTime",
   "SubSecTimeOriginal","SubSecTimeDigitized","OffsetTime","OffsetTimeOriginal","OffsetTimeDigitized"]);
@@ -988,6 +1072,100 @@ function stripWebP(analysis, removeSet){
 }
 
 /* ============================================================
+   PDF metadata (Info dictionary + XMP packet) via pdf-lib
+   ============================================================ */
+
+var PDF_INFO_LABELS = {
+  Title:"Title", Author:"Author", Subject:"Subject", Keywords:"Keywords",
+  Creator:"Creator Application", Producer:"PDF Producer",
+  CreationDate:"Creation Date", ModDate:"Modification Date", Trapped:"Trapped Flag"
+};
+var PDF_STANDARD_KEY_CATEGORY = {
+  Title:"author", Author:"author", Subject:"author", Keywords:"author",
+  Creator:"camera", Producer:"camera",
+  CreationDate:"datetime", ModDate:"datetime",
+  Trapped:"technical"
+};
+
+function formatPDFDate(raw){
+  var m = /^D:(\d{4})(\d{2})(\d{2})(\d{2})?(\d{2})?(\d{2})?/.exec(raw || "");
+  if (!m) return raw;
+  var h = m[4] || "00", mi = m[5] || "00";
+  return m[1]+"-"+m[2]+"-"+m[3]+" "+h+":"+mi;
+}
+function unescapePDFString(s){
+  return s.replace(/\\([()\\nrtbf])/g, function(m, c){
+    var map = {"(":"(", ")":")", "\\":"\\", "n":"\n", "r":"\r", "t":"\t", "b":"\b", "f":"\f"};
+    return map[c] !== undefined ? map[c] : m;
+  });
+}
+function pdfValueToDisplay(key, val){
+  var str = "";
+  try { str = val && val.asString ? val.asString() : String(val); } catch(e){ str = String(val); }
+  str = unescapePDFString(str);
+  if (key === "CreationDate" || key === "ModDate") return formatPDFDate(str);
+  str = str.replace(/^\uFEFF/, "").trim();
+  if (str.length > 160) str = str.slice(0,160) + "…";
+  return str || "(empty)";
+}
+
+function analyzePDF(bytes){
+  return PDFLib.PDFDocument.load(bytes, {updateMetadata:false, ignoreEncryption:true}).then(function(pdfDoc){
+    var fields = [];
+    var infoDict = pdfDoc.getInfoDict();
+    infoDict.keys().forEach(function(nameObj){
+      var key = nameObj.asString().replace(/^\//,"");
+      var val = infoDict.get(nameObj);
+      var cat = PDF_STANDARD_KEY_CATEGORY[key] || "technical";
+      var label = PDF_INFO_LABELS[key] || ("Custom: " + key);
+      fields.push({
+        id:"pdfinfo-"+key, category:cat, tagName:label,
+        valueDisplay: pdfValueToDisplay(key, val),
+        kind:"pdfinfo", infoKey:key
+      });
+    });
+
+    var hasXMP = false;
+    try { hasXMP = !!pdfDoc.catalog.get(PDFLib.PDFName.of("Metadata")); } catch(e){}
+    if (hasXMP){
+      fields.push({
+        id:"pdf-xmp", category:"other", tagName:"Embedded XMP Metadata Packet",
+        valueDisplay:"May duplicate or extend the document properties above",
+        kind:"pdfxmp"
+      });
+    }
+
+    return {
+      format:"pdf", mime:"application/pdf", fields:fields,
+      context:{pdfDoc:pdfDoc, pageCount: pdfDoc.getPageCount()}
+    };
+  }).catch(function(e){
+    throw new Error("Couldn't parse this PDF — it may be encrypted, corrupted, or use unsupported features.");
+  });
+}
+
+function stripPDF(analysis, removeSet){
+  var pdfDoc = analysis.context.pdfDoc;
+  var infoDict = pdfDoc.getInfoDict();
+  var removedLabels = new Set();
+
+  analysis.fields.forEach(function(f){
+    if (!removeSet.has(f.category)) return;
+    if (f.kind === "pdfinfo"){
+      infoDict.delete(PDFLib.PDFName.of(f.infoKey));
+      removedLabels.add(categoryLabel("pdf", f.category));
+    } else if (f.kind === "pdfxmp"){
+      pdfDoc.catalog.delete(PDFLib.PDFName.of("Metadata"));
+      removedLabels.add(categoryLabel("pdf", f.category));
+    }
+  });
+
+  return pdfDoc.save({updateMetadata:false}).then(function(bytes){
+    return {bytes: bytes, removedLabels: Array.from(removedLabels)};
+  });
+}
+
+/* ============================================================
    Fallback (canvas re-encode) for unsupported formats
    ============================================================ */
 
@@ -1030,6 +1208,7 @@ function detectFormat(bytes){
   if (bytes[0]===0xFF && bytes[1]===0xD8 && bytes[2]===0xFF) return "jpeg";
   if (bytes[0]===0x89 && bytes[1]===0x50 && bytes[2]===0x4E && bytes[3]===0x47) return "png";
   if (readAscii(bytes,0,4)==="RIFF" && readAscii(bytes,8,4)==="WEBP") return "webp";
+  if (readAscii(bytes,0,5)==="%PDF-") return "pdf";
   return "other";
 }
 
@@ -1055,8 +1234,14 @@ function newFileRecord(file){
     analysis: null,
     toggles: {}, // category -> true(remove) / false(keep)
     dims: null,
+    pageCount: null,
     previewUrl: null,
-    result: null // {blob, url, removedLabels, fallbackUsed}
+    result: null, // {blob, url, removedLabels, fallbackUsed}
+    pdfMode: null, // null | "metadata" | "pages"
+    pdfPages: null, // [{num, thumbDataUrl, marked}]
+    pdfPagesLoading: false,
+    pdfPagesError: null,
+    pageResult: null // {blob, url, size, removedCount, keptCount}
   };
 }
 
@@ -1092,12 +1277,19 @@ function loadFile(file){
       rec.mime = mime;
       ensureToggles(rec);
       rec.status = "ready";
-      var blobUrl = URL.createObjectURL(file);
-      rec.previewUrl = blobUrl;
-      var img = new Image();
-      img.onload = function(){ rec.dims = {w:img.naturalWidth, h:img.naturalHeight}; render(); };
-      img.src = blobUrl;
-      render();
+      if (format === "pdf"){
+        rec.pageCount = analysis.context.pageCount;
+        rec.previewUrl = null;
+        render();
+        renderPdfFirstPageThumb(rec);
+      } else {
+        var blobUrl = URL.createObjectURL(file);
+        rec.previewUrl = blobUrl;
+        var img = new Image();
+        img.onload = function(){ rec.dims = {w:img.naturalWidth, h:img.naturalHeight}; render(); };
+        img.src = blobUrl;
+        render();
+      }
     };
 
     try {
@@ -1117,6 +1309,14 @@ function loadFile(file){
       } else if (format === "webp"){
         var analysisWebp = analyzeWebP(bytes);
         proceed(analysisWebp, "image/webp");
+      } else if (format === "pdf"){
+        analyzePDF(bytes).then(function(analysisPdf){
+          proceed(analysisPdf, "application/pdf");
+        }).catch(function(e){
+          rec.status = "error";
+          rec.error = e.message || "Could not parse this PDF.";
+          render();
+        });
       } else {
         var fb2 = analyzeFallback(file);
         proceed(fb2, "image/png");
@@ -1158,6 +1358,17 @@ function processRecord(rec){
       var blobW = new Blob([resW.bytes], {type:"image/webp"});
       finishProcessing(rec, blobW, resW.removedLabels, false);
       resolve();
+    } else if (rec.analysis.format === "pdf"){
+      stripPDF(rec.analysis, removeSet).then(function(resD){
+        var blobD = new Blob([resD.bytes], {type:"application/pdf"});
+        finishProcessing(rec, blobD, resD.removedLabels, false);
+        resolve();
+      }).catch(function(e){
+        rec.status = "error";
+        rec.error = e.message || "Could not process this PDF.";
+        render();
+        resolve();
+      });
     } else {
       stripFallback(rec.analysis).then(function(res2){
         finishProcessing(rec, res2.blob, res2.removedLabels, true);
@@ -1182,8 +1393,100 @@ function finishProcessing(rec, blob, removedLabels, fallbackUsed){
 
 function cleanFileName(name, mime){
   var base = name.replace(/\.[^.]+$/, "");
-  var ext = mime === "image/jpeg" ? ".jpg" : mime === "image/webp" ? ".webp" : ".png";
+  var ext = mime === "image/jpeg" ? ".jpg" : mime === "image/webp" ? ".webp" : mime === "application/pdf" ? ".pdf" : ".png";
   return base + "-clean" + ext;
+}
+
+/* ---- PDF page view: thumbnails + removal ---- */
+
+function renderPdfFirstPageThumb(rec){
+  readFileAsArrayBuffer(rec.file).then(function(buf){
+    return pdfjsLib.getDocument({data: buf}).promise;
+  }).then(function(pdf){
+    return pdf.getPage(1);
+  }).then(function(page){
+    var baseViewport = page.getViewport({scale:1});
+    var scale = 520 / baseViewport.width;
+    var viewport = page.getViewport({scale: scale});
+    var canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    var ctx = canvas.getContext("2d");
+    return page.render({canvasContext: ctx, viewport: viewport}).promise.then(function(){
+      rec.previewUrl = canvas.toDataURL("image/png");
+      render();
+    });
+  }).catch(function(e){
+    // leave previewUrl null — the document placeholder stays as a graceful fallback
+  });
+}
+
+function loadPdfPageThumbs(rec){
+  rec.pdfPagesLoading = true;
+  rec.pdfPagesError = null;
+  rec.pdfPages = [];
+  render();
+
+  readFileAsArrayBuffer(rec.file).then(function(buf){
+    var loadingTask = pdfjsLib.getDocument({data: buf});
+    return loadingTask.promise;
+  }).then(function(pdf){
+    var chain = Promise.resolve();
+    var collected = [];
+    var n = pdf.numPages;
+    for (var i = 1; i <= n; i++){
+      (function(pageNum){
+        chain = chain.then(function(){
+          return pdf.getPage(pageNum).then(function(page){
+            var baseViewport = page.getViewport({scale:1});
+            var scale = 240 / baseViewport.width;
+            var viewport = page.getViewport({scale: scale});
+            var canvas = document.createElement("canvas");
+            canvas.width = Math.ceil(viewport.width);
+            canvas.height = Math.ceil(viewport.height);
+            var ctx = canvas.getContext("2d");
+            return page.render({canvasContext: ctx, viewport: viewport}).promise.then(function(){
+              collected.push({num: pageNum, thumbDataUrl: canvas.toDataURL("image/png"), marked:false});
+              rec.pdfPages = collected.slice();
+              render();
+            });
+          });
+        });
+      })(i);
+    }
+    return chain;
+  }).then(function(){
+    rec.pdfPagesLoading = false;
+    render();
+  }).catch(function(e){
+    rec.pdfPagesLoading = false;
+    rec.pdfPagesError = "Couldn't render this PDF's pages — it may be encrypted or use unsupported features.";
+    render();
+  });
+}
+
+function removeMarkedPagesForRec(rec){
+  var markedNums = rec.pdfPages.filter(function(p){ return p.marked; }).map(function(p){ return p.num; });
+  if (markedNums.length === 0 || markedNums.length === rec.pdfPages.length) return Promise.resolve();
+
+  return readFileAsArrayBuffer(rec.file).then(function(buf){
+    return PDFLib.PDFDocument.load(new Uint8Array(buf), {updateMetadata:false, ignoreEncryption:true});
+  }).then(function(doc){
+    markedNums.slice().sort(function(a,b){ return b-a; }).forEach(function(num){
+      doc.removePage(num - 1);
+    });
+    return doc.save({updateMetadata:false});
+  }).then(function(bytes){
+    var blob = new Blob([bytes], {type:"application/pdf"});
+    if (rec.pageResult && rec.pageResult.url) URL.revokeObjectURL(rec.pageResult.url);
+    var url = URL.createObjectURL(blob);
+    rec.pageResult = {
+      blob:blob, url:url, size:blob.size,
+      removedCount: markedNums.length,
+      keptCount: rec.pdfPages.length - markedNums.length
+    };
+    render();
+  });
 }
 
 /* ============================================================
@@ -1202,10 +1505,128 @@ function render(){
 
   renderFilmstrip();
   renderPreview();
-  renderCategoryPane();
+  renderMainPane();
   renderActionBar();
 
   $("fileCount").textContent = state.files.length + " file" + (state.files.length===1?"":"s") + " loaded";
+}
+
+function renderMainPane(){
+  var rec = activeRecord();
+  var backBtn = $("pdfBackBtn");
+  var quickActions = $("quickActions");
+  var paneTitle = $("paneTitle");
+
+  if (rec && rec.format === "pdf" && rec.status !== "loading" && rec.status !== "error"){
+    if (!rec.pdfMode){
+      backBtn.hidden = true;
+      quickActions.hidden = true;
+      renderPdfChooser();
+      return;
+    }
+    backBtn.hidden = false;
+    if (rec.pdfMode === "pages"){
+      quickActions.hidden = true;
+      renderPdfPageGrid();
+      return;
+    }
+    quickActions.hidden = false;
+    paneTitle.innerHTML = 'Detected Metadata <span class="count" id="paneCount"></span>';
+    renderCategoryPane();
+    return;
+  }
+
+  backBtn.hidden = true;
+  quickActions.hidden = false;
+  paneTitle.innerHTML = 'Detected Metadata <span class="count" id="paneCount"></span>';
+  renderCategoryPane();
+}
+
+function renderPdfChooser(){
+  var list = $("categoryList");
+  var resultLog = $("resultLog");
+  var rec = activeRecord();
+  resultLog.hidden = true;
+  $("paneTitle").textContent = "Choose a View";
+
+  list.innerHTML =
+    '<div class="pdf-chooser">' +
+      '<button type="button" class="chooser-card" data-choice="metadata">' +
+        '<div class="chooser-icon">✎</div>' +
+        '<div class="chooser-title">View Metadata</div>' +
+        '<div class="chooser-desc">Inspect and selectively remove Title, Author, dates, application info, and embedded XMP data.</div>' +
+      '</button>' +
+      '<button type="button" class="chooser-card" data-choice="pages">' +
+        '<div class="chooser-icon">▤</div>' +
+        '<div class="chooser-title">View Pages</div>' +
+        '<div class="chooser-desc">See every page as a thumbnail and mark the ones you want removed.</div>' +
+      '</button>' +
+    '</div>';
+
+  Array.prototype.forEach.call(list.querySelectorAll(".chooser-card"), function(btn){
+    btn.addEventListener("click", function(){
+      rec.pdfMode = btn.dataset.choice;
+      if (rec.pdfMode === "pages" && !rec.pdfPages) loadPdfPageThumbs(rec);
+      render();
+    });
+  });
+}
+
+function renderPdfPageGrid(){
+  var rec = activeRecord();
+  var list = $("categoryList");
+  var resultLog = $("resultLog");
+  var pages = rec.pdfPages || [];
+  $("paneTitle").innerHTML = 'Pages <span class="count">' + (pages.length ? "— " + pages.length + " page" + (pages.length===1?"":"s") : "") + '</span>';
+
+  if (rec.pdfPagesError){
+    list.innerHTML = '<div class="file-error"><b>Could not render pages</b>' + escapeHtml(rec.pdfPagesError) + '</div>';
+    resultLog.hidden = true;
+    return;
+  }
+
+  list.innerHTML = "";
+  var grid = document.createElement("div");
+  grid.className = "page-grid";
+  pages.forEach(function(p){
+    var tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = "page-tile" + (p.marked ? " marked" : "");
+    tile.innerHTML =
+      '<span class="page-thumb-wrap"><img src="'+p.thumbDataUrl+'" alt="Page '+p.num+'">' +
+      '<span class="page-mark-x" aria-hidden="true">✕</span></span>' +
+      '<span class="page-num">Page ' + p.num + '</span>';
+    tile.addEventListener("click", function(){
+      p.marked = !p.marked;
+      renderPdfPageGrid();
+      renderActionBar();
+    });
+    grid.appendChild(tile);
+  });
+  list.appendChild(grid);
+
+  if (rec.pdfPagesLoading){
+    var note = document.createElement("div");
+    note.className = "processing-note";
+    note.innerHTML = "Rendering pages…" + '<div class="spinner-line" style="margin-top:8px"></div>';
+    list.appendChild(note);
+  }
+
+  if (rec.pageResult){
+    resultLog.hidden = false;
+    var html = '<h3>Pages Removed — ' + rec.caseId + '</h3>';
+    html += '<div class="result-sizes">';
+    html += '<div class="stat"><div class="num">'+rec.pageResult.removedCount+'</div><div class="lbl">Removed</div></div>';
+    html += '<div class="stat"><div class="num">'+rec.pageResult.keptCount+'</div><div class="lbl">Kept</div></div>';
+    html += '<div class="stat"><div class="num">'+formatBytes(rec.pageResult.size)+'</div><div class="lbl">New Size</div></div>';
+    html += '</div>';
+    html += '<div class="result-actions">';
+    html += '<a class="btn btn-keep" href="'+rec.pageResult.url+'" download="'+escapeHtml(cleanFileName(rec.name, "application/pdf"))+'">Download PDF</a>';
+    html += '</div>';
+    resultLog.innerHTML = html;
+  } else {
+    resultLog.hidden = true;
+  }
 }
 
 function renderFilmstrip(){
@@ -1219,6 +1640,11 @@ function renderFilmstrip(){
       var img = document.createElement("img");
       img.src = rec.previewUrl; img.alt = "";
       item.appendChild(img);
+    } else if (rec.format === "pdf"){
+      var lbl = document.createElement("span");
+      lbl.className = "film-doc-label";
+      lbl.textContent = "PDF";
+      item.appendChild(lbl);
     }
     if (rec.status === "processed" || rec.status === "error"){
       var badge = document.createElement("span");
@@ -1240,15 +1666,37 @@ function renderPreview(){
   var rec = activeRecord();
   if (!rec) return;
   var img = $("previewImg");
-  img.src = rec.result ? rec.result.url : (rec.previewUrl || "");
-  img.alt = rec.name;
+  var docEl = $("previewDoc");
+  var frame = $("previewFrame");
+
+  if (rec.format === "pdf"){
+    if (rec.previewUrl){
+      docEl.hidden = true;
+      img.hidden = false;
+      frame.classList.remove("frame-doc");
+      img.src = rec.previewUrl;
+      img.alt = rec.name + " — page 1 preview";
+    } else {
+      img.hidden = true;
+      docEl.hidden = false;
+      frame.classList.add("frame-doc");
+      $("previewDocName").textContent = rec.name;
+    }
+  } else {
+    docEl.hidden = true;
+    img.hidden = false;
+    frame.classList.remove("frame-doc");
+    img.src = rec.result ? rec.result.url : (rec.previewUrl || "");
+    img.alt = rec.name;
+  }
 
   var tag = $("fileInfoTag");
   var rows = [];
   rows.push(["Case No.", rec.caseId, true]);
   rows.push(["File", rec.name]);
   rows.push(["Format", (rec.format||"unknown").toUpperCase()]);
-  if (rec.dims) rows.push(["Dimensions", rec.dims.w + " × " + rec.dims.h + " px"]);
+  if (rec.format === "pdf" && rec.pageCount) rows.push(["Pages", String(rec.pageCount)]);
+  else if (rec.dims) rows.push(["Dimensions", rec.dims.w + " × " + rec.dims.h + " px"]);
   rows.push(["Original Size", formatBytes(rec.size)]);
   if (rec.result) rows.push(["Clean Size", formatBytes(rec.result.size)]);
   rows.push(["Status", rec.status === "processed" ? "Redacted" : rec.status === "error" ? "Error" : rec.status === "loading" ? "Analyzing…" : "Ready"]);
@@ -1287,7 +1735,7 @@ function renderCategoryPane(){
     $("paneCount").textContent = "— " + presentCats.length + " categor" + (presentCats.length===1?"y":"ies") + " found";
     presentCats.forEach(function(cat){
       var fields = groups[cat];
-      var meta = CATEGORY_META[cat];
+      var meta = categoryMetaFor(rec.analysis.format, cat);
       var willRemove = !!rec.toggles[cat];
       var card = document.createElement("div");
       card.className = "cat-card" + (willRemove ? " decided-remove" : " decided-keep");
@@ -1386,6 +1834,43 @@ function renderActionBar(){
   var summary = $("summaryText");
   var stripBtn = $("stripBtn");
   var stripAllBtn = $("stripAllBtn");
+  var removePagesBtn = $("removePagesBtn");
+
+  var inPagesMode = !!(rec && rec.format === "pdf" && rec.pdfMode === "pages");
+  var inChooser = !!(rec && rec.format === "pdf" && !rec.pdfMode && rec.status !== "loading" && rec.status !== "error");
+
+  stripBtn.hidden = inPagesMode || inChooser;
+  removePagesBtn.hidden = !inPagesMode;
+  stripAllBtn.hidden = state.files.length < 2 || inPagesMode || inChooser;
+
+  if (inChooser){
+    bar.style.opacity = "0.4";
+    return;
+  }
+
+  if (inPagesMode){
+    bar.style.opacity = "1";
+    var pages = rec.pdfPages || [];
+    var markedCount = pages.filter(function(p){ return p.marked; }).length;
+    if (rec.pdfPagesLoading){
+      summary.textContent = "Rendering pages…";
+      removePagesBtn.disabled = true;
+    } else if (pages.length === 0){
+      summary.textContent = rec.pdfPagesError ? "Couldn't render this PDF." : "No pages found.";
+      removePagesBtn.disabled = true;
+    } else if (markedCount === 0){
+      summary.innerHTML = "Click any page to mark it for removal.";
+      removePagesBtn.disabled = true;
+    } else if (markedCount === pages.length){
+      summary.innerHTML = "<b>Can't remove every page</b> — keep at least one.";
+      removePagesBtn.disabled = true;
+    } else {
+      summary.innerHTML = "<b>" + markedCount + " of " + pages.length + "</b> pages marked for removal";
+      removePagesBtn.disabled = false;
+    }
+    removePagesBtn.textContent = rec.pageResult ? "Remove Again" : "Remove Marked Pages";
+    return;
+  }
 
   if (!rec || rec.status === "loading" || rec.status === "error"){
     bar.style.opacity = "0.5";
@@ -1409,8 +1894,6 @@ function renderActionBar(){
       stripBtn.textContent = rec.status === "processed" ? "Re-run Redaction" : "Strip Metadata";
     }
   }
-
-  stripAllBtn.hidden = state.files.length < 2;
 }
 
 /* ============================================================
@@ -1419,7 +1902,9 @@ function renderActionBar(){
 
 function handleFiles(fileList){
   Array.from(fileList).forEach(function(file){
-    if (file.type.indexOf("image/") !== 0 && !/\.(jpe?g|png|webp|gif|bmp|tiff?)$/i.test(file.name)) return;
+    var isImage = file.type.indexOf("image/") === 0 || /\.(jpe?g|png|webp|gif|bmp|tiff?)$/i.test(file.name);
+    var isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    if (!isImage && !isPdf) return;
     loadFile(file);
   });
 }
@@ -1495,6 +1980,21 @@ $("stripAllBtn").addEventListener("click", function(){
     $("stripAllBtn").textContent = "Strip All Images";
     render();
   });
+});
+
+$("removePagesBtn").addEventListener("click", function(){
+  var rec = activeRecord(); if (!rec || !rec.pdfPages) return;
+  $("removePagesBtn").disabled = true;
+  $("removePagesBtn").textContent = "Processing…";
+  removeMarkedPagesForRec(rec).then(function(){
+    renderActionBar();
+  });
+});
+
+$("pdfBackBtn").addEventListener("click", function(){
+  var rec = activeRecord(); if (!rec) return;
+  rec.pdfMode = null;
+  render();
 });
 
 render();
